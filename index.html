@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>這是磨合，還是我一直在委屈？ | 數位療癒 SPA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'healing-bg': '#FFF7F0',
+                        'healing-primary': '#E29578',
+                        'healing-secondary': '#FFDDD2',
+                        'healing-text': '#4A3B32',
+                        'healing-dark': '#836B5D',
+                        'healing-card': '#FFFFFF',
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        
+        body {
+            background-color: #FFF7F0;
+            color: #4A3B32;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 1.125rem; /* 手機直式閱讀：字體加大 */
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+        
+        @media (min-width: 768px) {
+            body { font-size: 1.05rem; }
+        }
+
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 區塊切換動畫 */
+        .section-content {
+            display: none;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .section-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 客製化核取方塊 (禁止使用 SVG，改用純 CSS) */
+        .custom-check {
+            appearance: none;
+            min-width: 1.5rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #E29578;
+            border-radius: 0.375rem;
+            background-color: #FFF;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            margin-top: 0.3rem;
+        }
+        .custom-check:checked {
+            background-color: #E29578;
+        }
+        .custom-check:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        /* 卡片翻轉特效 (喵語錄) */
+        .flip-card {
+            background-color: transparent;
+            height: 280px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border-radius: 1rem;
+        }
+        .flip-card.active .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .flip-card-front {
+            background-color: #FFFFFF;
+            border: 2px dashed #FFDDD2;
+        }
+        .flip-card-back {
+            background-color: #E29578;
+            color: white;
+            transform: rotateY(180deg);
+            border: none;
+        }
+
+        /* 手風琴 (界線練習) */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+        }
+        .accordion-item.active .accordion-content {
+            max-height: 300px; /* 足夠大的數值 */
+        }
+        .accordion-item.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        /* 插畫風小圖示 (Emoji + CSS 背景圓) */
+        .icon-illustration {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #FFDDD2;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(226, 149, 120, 0.2);
+        }
+        
+        .chat-bubble {
+            position: relative;
+            background: #FFFFFF;
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid #E29578;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- 頂部導覽列 -->
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-healing-secondary shadow-sm">
+        <div class="max-w-3xl mx-auto px-4">
+            <div class="flex items-center space-x-6 overflow-x-auto py-3 no-scrollbar whitespace-nowrap text-[1.1rem]">
+                <button onclick="switchTab('home')" class="nav-btn font-bold text-healing-primary transition-colors border-b-2 border-healing-primary pb-1" data-target="home">🏠 首頁</button>
+                <button onclick="switchTab('chap1')" class="nav-btn font-medium text-healing-dark hover:text-healing-primary transition-colors pb-1" data-target="chap1">📝 1. 自我檢查</button>
+                <button onclick="switchTab('chap2')" class="nav-btn font-medium text-healing-dark hover:text-healing-primary transition-colors pb-1" data-target="chap2">⚖️ 2. 磨合 vs 委屈</button>
+                <button onclick="switchTab('chap3')" class="nav-btn font-medium text-healing-dark hover:text-healing-primary transition-colors pb-1" data-target="chap3">🚩 3. 紅旗清單</button>
+                <button onclick="switchTab('chap4')" class="nav-btn font-medium text-healing-dark hover:text-healing-primary transition-colors pb-1" data-target="chap4">🛡️ 4. 界線練習</button>
+                <button onclick="switchTab('chap5')" class="nav-btn font-medium text-healing-dark hover:text-healing-primary transition-colors pb-1" data-target="chap5">💬 5. 表達方式</button>
+                <button onclick="switchTab('chap6')" class="nav-btn font-medium text-healing-dark hover:text-healing-primary transition-colors pb-1" data-target="chap6">🐾 6. 喵語錄</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow max-w-3xl mx-auto w-full px-5 py-8">
+        
+        <!-- ================= 首頁 ================= -->
+        <section id="home" class="section-content active text-center pt-8">
+            <div class="mb-6 animate-[bounce_3s_infinite]">
+                <div class="text-[5rem]">🐈</div>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-healing-text mb-4 leading-snug">
+                這是磨合，<br class="md:hidden">還是我一直在委屈？
+            </h1>
+            <p class="text-lg md:text-xl text-healing-dark mb-8 italic">
+                寫給每一個在關係裡，分不清「還能忍」跟「不該忍」的你。
+            </p>
+            
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-healing-secondary text-left mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center"><span class="mr-2">📖</span>寫在前面</h2>
+                <p class="mb-4">這本小冊子不是要告訴你「該不該分手」，也不是要幫你的伴侶打分數。</p>
+                <p class="mb-4">它只想陪你回答一個更根本的問題：</p>
+                <blockquote class="bg-healing-bg p-4 border-l-4 border-healing-primary rounded-r-lg font-medium text-healing-primary mb-4">
+                    「我現在感覺到的不舒服，是關係正常的摩擦，還是我已經在委屈自己了？」
+                </blockquote>
+                <p class="mb-4">磨合與委屈外表看起來很像——都會不舒服、都會忍耐。但方向完全不同：磨合是「兩個人一起往中間靠近」；委屈是「只有你一個人在讓步」。</p>
+                <p>如果你正在看這篇文章，代表你心裡某個角落已經在問這個問題了。那我們就一起，把它看清楚。</p>
+            </div>
+            
+            <button onclick="switchTab('chap1')" class="bg-healing-primary text-white font-bold py-4 px-10 rounded-full shadow-md hover:bg-[#D48265] transition-transform transform hover:scale-105 active:scale-95 text-lg">
+                開始自我檢查 🐾
+            </button>
+        </section>
+
+        <!-- ================= Chapter 1｜12 題自我檢查 ================= -->
+        <section id="chap1" class="section-content">
+            <div class="text-center mb-8">
+                <div class="icon-illustration">📝</div>
+                <h2 class="text-2xl font-bold">Chapter 1｜12 題自我檢查</h2>
+                <p class="text-healing-dark mt-2">請針對最近三個月，最常讓你不舒服的那段互動來回答。</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 md:p-8 shadow-sm border border-healing-secondary">
+                <p class="text-sm text-gray-500 mb-6 italic">不用一次全部認真作答，先憑直覺打勾。凡是讓你遲疑超過三秒的題目，都值得回頭再看一次。</p>
+                
+                <div id="checklist-container" class="space-y-4">
+                    <!-- 題目由 JS 動態生成 -->
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-healing-secondary">
+                    <h3 class="text-xl font-bold mb-4">初步判讀結果分析</h3>
+                    <div id="check-result" class="bg-gray-50 rounded-xl p-4 text-gray-600 transition-all">
+                        請勾選上方題目，系統將即時為您分析目前狀態。
+                    </div>
+                    
+                    <!-- 數據圖表 (雷達圖) -->
+                    <div class="mt-6 h-64 relative w-full flex justify-center">
+                        <canvas id="scoreRadarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-8">
+                <button onclick="switchTab('chap2')" class="text-healing-primary font-bold hover:underline">下一章：兩張地圖，別走錯路 ➔</button>
+            </div>
+        </section>
+
+        <!-- ================= Chapter 2｜磨合與委屈的差別 ================= -->
+        <section id="chap2" class="section-content">
+            <div class="text-center mb-8">
+                <div class="icon-illustration">⚖️</div>
+                <h2 class="text-2xl font-bold">Chapter 2｜磨合與委屈的差別</h2>
+                <p class="text-healing-dark mt-2">忍耐本身不是指標，忍耐之後發生了什麼，才是指標。</p>
+            </div>
+
+            <!-- 圖表：時間與消耗比較圖 -->
+            <div class="bg-white rounded-2xl p-5 md:p-8 shadow-sm border border-healing-secondary mb-8">
+                <h3 class="text-lg font-bold mb-2 text-center text-healing-primary">📊 時間演進下的情緒與摩擦成本比較</h3>
+                <p class="text-sm text-gray-500 text-center mb-4">隨時間推移，磨合會降低摩擦，而委屈會增加心智消耗。</p>
+                <div class="relative h-64 w-full">
+                    <canvas id="compareChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-healing-secondary mb-8 overflow-x-auto">
+                <table class="min-w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-healing-primary">
+                            <th class="py-3 px-4 font-bold text-healing-primary">面向</th>
+                            <th class="py-3 px-4 font-bold text-gray-700 bg-gray-50">磨合 (Adjustment)</th>
+                            <th class="py-3 px-4 font-bold text-gray-700">委屈</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm md:text-base">
+                        <tr class="border-b border-gray-100">
+                            <td class="py-3 px-4 font-medium">方向</td>
+                            <td class="py-3 px-4 bg-gray-50">雙方都在移動、往中間靠近</td>
+                            <td class="py-3 px-4 text-red-500 font-medium">只有你單方面在退讓</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-3 px-4 font-medium">對方是否知情</td>
+                            <td class="py-3 px-4 bg-gray-50">對方知道你在意，並調整</td>
+                            <td class="py-3 px-4">對方常常不知道，覺得理所當然</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-3 px-4 font-medium">情緒後續</td>
+                            <td class="py-3 px-4 bg-gray-50">被理解、被感謝，情緒消化</td>
+                            <td class="py-3 px-4">吞下去，累積成說不清的疲憊</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-3 px-4 font-medium">時間軸</td>
+                            <td class="py-3 px-4 bg-gray-50">隨時間，摩擦點會減少</td>
+                            <td class="py-3 px-4">隨時間，退讓範圍反而變大</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-3 px-4 font-medium">事後感受</td>
+                            <td class="py-3 px-4 bg-gray-50">「我們一起解決了問題」</td>
+                            <td class="py-3 px-4">「算了，說了也沒用」</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-medium">自我認同</td>
+                            <td class="py-3 px-4 bg-gray-50">相處中依然覺得被尊重</td>
+                            <td class="py-3 px-4">漸漸開始討好、預判對方情緒</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-healing-bg p-5 rounded-2xl border-l-4 border-healing-primary mb-8">
+                <div class="text-xl font-bold text-healing-primary text-center">
+                    「磨合會讓你更靠近彼此；<br>委屈會讓你更遠離自己。」
+                </div>
+            </div>
+            
+            <div class="text-center mt-8">
+                <button onclick="switchTab('chap3')" class="text-healing-primary font-bold hover:underline">下一章：關係紅旗清單 ➔</button>
+            </div>
+        </section>
+
+        <!-- ================= Chapter 3｜關係紅旗清單 ================= -->
+        <section id="chap3" class="section-content">
+            <div class="text-center mb-8">
+                <div class="icon-illustration bg-red-100 text-red-500">🚩</div>
+                <h2 class="text-2xl font-bold">Chapter 3｜關係紅旗清單</h2>
+                <p class="text-healing-dark mt-2">點擊你曾反覆經歷的狀況，不要讓它被「習慣」蓋過去。</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 md:p-8 shadow-sm border border-healing-secondary">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="font-bold text-gray-700">已發現的紅旗：</span>
+                    <span id="redflag-count" class="text-2xl font-bold text-red-500">0</span>
+                </div>
+                
+                <div id="redflag-container" class="space-y-3">
+                    <!-- 紅旗題目由 JS 動態生成 -->
+                </div>
+                
+                <div id="redflag-result" class="mt-6 p-4 rounded-xl bg-gray-50 text-gray-600 transition-all text-center">
+                    請點選上方清單，檢視關係健康度。
+                </div>
+            </div>
+            
+            <div class="text-center mt-8">
+                <button onclick="switchTab('chap4')" class="text-healing-primary font-bold hover:underline">下一章：三種界線練習 ➔</button>
+            </div>
+        </section>
+
+        <!-- ================= Chapter 4｜三種界線練習 ================= -->
+        <section id="chap4" class="section-content">
+            <div class="text-center mb-8">
+                <div class="icon-illustration bg-blue-100 text-blue-500">🛡️</div>
+                <h2 class="text-2xl font-bold">Chapter 4｜三種界線練習</h2>
+                <p class="text-healing-dark mt-2">把「忍耐」換成「表達」：讓對方知道靠近你的方式哪些可以、哪些不行。</p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Accordion 1 -->
+                <div class="accordion-item bg-white rounded-2xl shadow-sm border border-healing-secondary overflow-hidden">
+                    <button class="w-full px-6 py-4 text-left flex justify-between items-center bg-white hover:bg-gray-50 focus:outline-none" onclick="toggleAccordion(this)">
+                        <span class="font-bold text-lg">練習一：情緒界線</span>
+                        <span class="accordion-icon transition-transform duration-300 text-healing-primary font-bold">▼</span>
+                    </button>
+                    <div class="accordion-content bg-gray-50 px-6">
+                        <div class="py-4 border-t border-gray-200">
+                            <p class="font-bold text-gray-700 mb-2">🎯 核心概念：</p>
+                            <p class="mb-4">「我可以陪你，但不代表我要吸收你的情緒」</p>
+                            <p class="font-bold text-gray-700 mb-2">📌 適用情境：</p>
+                            <p class="mb-4 text-sm text-gray-600">對方心情不好時習慣把氣出在你身上，或要求你立刻安撫他的所有情緒。</p>
+                            <p class="font-bold text-gray-700 mb-2">💬 練習句型：</p>
+                            <p class="bg-white p-3 rounded-lg border-l-4 border-blue-400 text-gray-800">「我看得出來你現在很不好受，我願意陪你，但我沒辦法在你用這種口氣跟我說話的時候繼續聊。等你準備好好說的時候，我還在。」</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion 2 -->
+                <div class="accordion-item bg-white rounded-2xl shadow-sm border border-healing-secondary overflow-hidden">
+                    <button class="w-full px-6 py-4 text-left flex justify-between items-center bg-white hover:bg-gray-50 focus:outline-none" onclick="toggleAccordion(this)">
+                        <span class="font-bold text-lg">練習二：時間界線</span>
+                        <span class="accordion-icon transition-transform duration-300 text-healing-primary font-bold">▼</span>
+                    </button>
+                    <div class="accordion-content bg-gray-50 px-6">
+                        <div class="py-4 border-t border-gray-200">
+                            <p class="font-bold text-gray-700 mb-2">🎯 核心概念：</p>
+                            <p class="mb-4">「我需要的空間，不是不愛你」</p>
+                            <p class="font-bold text-gray-700 mb-2">📌 適用情境：</p>
+                            <p class="mb-4 text-sm text-gray-600">對方把「你想要獨處」解讀成「你不在乎我」，讓你因此不敢提出這個需求。</p>
+                            <p class="font-bold text-gray-700 mb-2">💬 練習句型：</p>
+                            <p class="bg-white p-3 rounded-lg border-l-4 border-green-400 text-gray-800">「我需要今晚一個人靜一靜，這不代表我在生你的氣，也不代表我們之間有問題。我明天會比較有力氣好好跟你聊。」</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion 3 -->
+                <div class="accordion-item bg-white rounded-2xl shadow-sm border border-healing-secondary overflow-hidden">
+                    <button class="w-full px-6 py-4 text-left flex justify-between items-center bg-white hover:bg-gray-50 focus:outline-none" onclick="toggleAccordion(this)">
+                        <span class="font-bold text-lg">練習三：責任界線</span>
+                        <span class="accordion-icon transition-transform duration-300 text-healing-primary font-bold">▼</span>
+                    </button>
+                    <div class="accordion-content bg-gray-50 px-6">
+                        <div class="py-4 border-t border-gray-200">
+                            <p class="font-bold text-gray-700 mb-2">🎯 核心概念：</p>
+                            <p class="mb-4">「這是你的情緒，不是我造成的義務」</p>
+                            <p class="font-bold text-gray-700 mb-2">📌 適用情境：</p>
+                            <p class="mb-4 text-sm text-gray-600">對方習慣把自己的不開心，包裝成「都是因為你」，讓你長期承擔不屬於你的責任。</p>
+                            <p class="font-bold text-gray-700 mb-2">💬 練習句型：</p>
+                            <p class="bg-white p-3 rounded-lg border-l-4 border-purple-400 text-gray-800">「我可以理解你不開心，但這件事不是我造成的，我不會因為你不開心，就承擔我不該承擔的部分。」</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-8">
+                <button onclick="switchTab('chap5')" class="text-healing-primary font-bold hover:underline">下一章：不攻擊對方的表達方式 ➔</button>
+            </div>
+        </section>
+
+        <!-- ================= Chapter 5｜表達方式 ================= -->
+        <section id="chap5" class="section-content">
+            <div class="text-center mb-8">
+                <div class="icon-illustration bg-yellow-100 text-yellow-600">💬</div>
+                <h2 class="text-2xl font-bold">Chapter 5｜10句表達方式</h2>
+                <p class="text-healing-dark mt-2 text-sm">邏輯是：先說感受，再說需求，不評價對方的人格。</p>
+            </div>
+
+            <div class="space-y-4" id="chat-bubbles">
+                <!-- 對話泡泡動態生成 -->
+            </div>
+            
+            <div class="text-center mt-8">
+                <button onclick="switchTab('chap6')" class="text-healing-primary font-bold hover:underline">下一章：三喵陪伴語錄卡 ➔</button>
+            </div>
+        </section>
+
+        <!-- ================= Chapter 6｜三喵陪伴語錄卡 ================= -->
+        <section id="chap6" class="section-content">
+            <div class="text-center mb-8">
+                <div class="icon-illustration bg-orange-100 text-orange-500">🐾</div>
+                <h2 class="text-2xl font-bold">Chapter 6｜三喵陪伴語錄卡</h2>
+                <p class="text-healing-dark mt-2">當你不想再分析、只想被陪著的時候，點擊翻開卡片。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="cat-cards">
+                <!-- 卡片動態生成 -->
+            </div>
+
+            <!-- 結語 -->
+            <div class="mt-12 bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-healing-secondary text-center">
+                <h3 class="text-xl font-bold mb-4">結語</h3>
+                <p class="text-gray-700 mb-4">你的感受，不需要被證明合理，才值得被重視。</p>
+                <p class="text-gray-700">願你在這段關係裡，無論最後選擇留下或離開，都是清醒地、為自己做的決定。</p>
+                <div class="mt-6 text-sm text-gray-400 italic">© 這是磨合，還是我一直在委屈？｜數位療癒文字系列</div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-auto py-6 text-center text-sm text-gray-400">
+        <p>為自己做的決定，永遠不嫌晚。 🐈 療癒 SPA 網頁版</p>
+    </footer>
+
+    <!-- JavaScript 邏輯 -->
+    <script>
+        // --- 導覽列與分頁邏輯 ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.target === tabId) {
+                    btn.classList.add('border-b-2', 'border-healing-primary', 'text-healing-primary');
+                    btn.classList.remove('text-healing-dark');
+                } else {
+                    btn.classList.remove('border-b-2', 'border-healing-primary', 'text-healing-primary');
+                    btn.classList.add('text-healing-dark');
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- 手風琴互動 (Chapter 4) ---
+        function toggleAccordion(btn) {
+            const item = btn.parentElement;
+            item.classList.toggle('active');
+        }
+
+        // --- 數據資料區 ---
+        
+        // Chapter 1: 12題
+        const checkQuestions = [
+            "1. 這件事發生後，我是不是常常需要「先說服自己沒關係」，才有辦法繼續相處？",
+            "2. 我讓步的時候，對方知道我在讓步嗎？還是他以為這一切都很自然？",
+            "3. 如果我今天把心裡真正的感受說出來，我會擔心對方生氣、覺得我小題大作，還是會冷處理我？",
+            "4. 這段關係裡，主動道歉、主動退讓的人，是不是總是我？",
+            "5. 我有沒有為了不吵架，把「我希望」改口成「都可以」，但心裡其實很在意？",
+            "6. 對方讓步的時候，我看得出來、也感受得到嗎？還是我很難想起上次他讓步是什麼時候？",
+            "7. 我是不是常常需要跟朋友、跟自己反覆解釋「他其實不是故意的」？",
+            "8. 這段關係讓我在情緒穩定的時候更像自己，還是讓我變得比以前更緊繃、更小心翼翼？",
+            "9. 如果角色互換，今天是我這樣對待對方，我會覺得這樣的自己很過分嗎？",
+            "10. 我心裡有沒有一份「等他哪天終於懂了」的期待，但這份期待已經放了很久，卻一直沒有兌現？",
+            "11. 我有沒有因為害怕失去這段關係，而不敢提出真正想要的東西？",
+            "12. 如果拿掉「習慣」跟「捨不得」，只問自己一句話——「這樣的相處方式，是我想要的嗎？」"
+        ];
+
+        // Chapter 3: 紅旗清單
+        const redFlags = [
+            "他生氣的時候，最後道歉的人常常是你。",
+            "你的感受經常被簡化成「你太敏感」「你想太多」。",
+            "你們的衝突，最後總是圍繞著「你哪裡又做錯了」，而不是「這件事我們可以怎麼一起處理」。",
+            "你開始在做某些事之前，先在腦中預演「他會不會不高興」。",
+            "你的朋友、家人開始隱約表達擔心，而你花很多力氣替對方辯護。",
+            "他對外人溫和有禮，只有對你才會不耐煩、口氣差。",
+            "每次你提出需求，最後都變成在安撫他的情緒，你的需求反而被晾在一邊。",
+            "你越來越少主動分享心情，因為分享之後常常換來評價，而不是理解。",
+            "你發現自己在「報備」而不是「分享」——說話前會先想好怎麼講他才不會不開心。",
+            "重要的決定幾乎都是他說了算，你的意見只是參考。",
+            "吵架後，道歉的方式從來不是「我理解你為什麼難過」，而是「好啦好啦別生氣了」。",
+            "你想到要跟他討論某個問題，第一反應是「算了，說了也是白說」。"
+        ];
+
+        // Chapter 5: 10句表達
+        const expressions = [
+            "這件事發生的時候，我心裡其實蠻難受的。",
+            "我不是想吵架，我只是希望這件事可以被好好討論。",
+            "當你這樣說的時候，我感覺不被尊重，不是我想太多。",
+            "我需要一點時間消化這件事，不代表我在冷戰。",
+            "我在意的不是誰對誰錯，而是我們可以怎麼一起解決。",
+            "我希望我說的話，也能被認真當一回事。",
+            "這不是要你道歉，我只是希望你知道這件事對我的影響。",
+            "我願意調整，但我需要你也看見我做的努力。",
+            "如果我這樣說讓你不舒服，我可以換個方式，但這件事我還是想跟你談清楚。",
+            "我愛你，跟我需要被好好對待，這兩件事不衝突。"
+        ];
+
+        // Chapter 6: 貓卡片
+        const catCards = [
+            { id: 1, quote: "你不用馬上決定要不要離開。<br><br>你只需要先誠實承認——<br>你現在真的很累。" },
+            { id: 2, quote: "委屈久了會忘記自己本來的樣子。<br><br>沒關係，我們慢慢找回來就好。" },
+            { id: 3, quote: "愛一個人，不代表要把自己愛丟掉。<br><br>這兩件事，從來就不應該是選擇題。" },
+            { id: 4, quote: "你今天沒有吵架、沒有崩潰，只是安靜地撐過去了。<br><br>這也是一種很了不起的堅強，值得被看見。" },
+            { id: 5, quote: "不是所有的忍耐都叫成熟，<br><br>有些忍耐，只是還沒有人告訴你，你可以不用忍。" },
+            { id: 6, quote: "如果今天的你只能做到『先照顧好自己』，<br><br>那也已經足夠了。" }
+        ];
+
+        // --- 初始化頁面內容 ---
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // 1. 產生 Self-Check 題目
+            const checkContainer = document.getElementById("checklist-container");
+            checkQuestions.forEach((q, index) => {
+                checkContainer.innerHTML += `
+                    <div class="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" onclick="document.getElementById('q${index}').click()">
+                        <input type="checkbox" id="q${index}" class="custom-check self-check flex-shrink-0" onclick="event.stopPropagation(); calculateCheckScore()">
+                        <label for="q${index}" class="cursor-pointer text-gray-700 pointer-events-none">${q}</label>
+                    </div>
+                `;
+            });
+
+            // 2. 產生紅旗清單
+            const flagContainer = document.getElementById("redflag-container");
+            redFlags.forEach((flag, index) => {
+                flagContainer.innerHTML += `
+                    <div class="flex items-start space-x-3 p-3 bg-white border border-gray-100 rounded-lg shadow-sm hover:border-red-300 transition-colors cursor-pointer" onclick="toggleRedFlag(this)">
+                        <span class="text-gray-300 flag-icon text-xl transition-colors">🚩</span>
+                        <span class="text-gray-700">${flag}</span>
+                    </div>
+                `;
+            });
+
+            // 3. 產生對話泡泡
+            const bubbleContainer = document.getElementById("chat-bubbles");
+            expressions.forEach((exp, i) => {
+                bubbleContainer.innerHTML += `
+                    <div class="chat-bubble ${i%2===0 ? 'mr-8' : 'ml-8 border-l-0 border-r-4 border-yellow-400 bg-yellow-50'}">
+                        ${exp}
+                    </div>
+                `;
+            });
+
+            // 4. 產生貓咪翻轉卡片
+            const cardContainer = document.getElementById("cat-cards");
+            catCards.forEach(card => {
+                cardContainer.innerHTML += `
+                    <div class="flip-card" onclick="this.classList.toggle('active')">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front text-healing-primary font-bold text-xl">
+                                <span class="text-4xl mb-3">🐾</span>
+                                點擊翻開卡片 ${card.id}
+                            </div>
+                            <div class="flip-card-back p-6 text-lg font-medium leading-relaxed flex items-center text-center">
+                                ${card.quote}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 5. 初始化雷達圖
+            initRadarChart();
+            
+            // 6. 初始化曲線圖
+            initLineChart();
+        });
+
+        // --- 互動邏輯與 Chart.js ---
+        let radarChartInstance = null;
+
+        function calculateCheckScore() {
+            const checks = document.querySelectorAll('.self-check');
+            let c1_6 = 0; // 單向讓步 (Q1-Q6)
+            let c7_9 = 0; // 幫對方找理由 (Q7-Q9)
+            let c10_12 = 0; // 期待未兌現/逃避 (Q10-Q12)
+
+            checks.forEach((cb, i) => {
+                if(cb.checked) {
+                    if(i < 6) c1_6++;
+                    else if(i < 9) c7_9++;
+                    else c10_12++;
+                }
+            });
+
+            // 更新評語
+            const resultBox = document.getElementById('check-result');
+            let messages = [];
+            if(c1_6 >= 3) messages.push("<span class='text-red-500 font-bold'>【單向讓步偏高】</span> 你目前承受的讓步比例偏高，強烈建議閱讀第二章。");
+            if(c7_9 >= 2) messages.push("<span class='text-orange-500 font-bold'>【習慣找理由】</span> 你可能已經習慣幫對方找理由，這是委屈感常見的偽裝。");
+            if(c10_12 >= 2) messages.push("<span class='text-purple-500 font-bold'>【內心已有答案】</span> 代表你心裡其實已經有答案，只是還沒準備好面對它。慢慢來。");
+            
+            if(messages.length === 0) {
+                if(document.querySelectorAll('.self-check:checked').length > 0) {
+                    resultBox.innerHTML = "<span class='text-green-600 font-bold'>目前狀態尚可：</span> 看起來關係中有微小摩擦，但尚未形成嚴重委屈。";
+                    resultBox.className = "mt-6 p-4 rounded-xl bg-green-50 text-gray-700 transition-all";
+                } else {
+                    resultBox.innerHTML = "請勾選上方題目，系統將即時為您分析目前狀態。";
+                    resultBox.className = "mt-6 p-4 rounded-xl bg-gray-50 text-gray-600 transition-all";
+                }
+            } else {
+                resultBox.innerHTML = "<ul class='list-disc pl-5 space-y-2'>" + messages.map(m=>`<li>${m}</li>`).join('') + "</ul>";
+                resultBox.className = "mt-6 p-4 rounded-xl bg-red-50 text-gray-700 transition-all";
+            }
+
+            // 更新圖表
+            if(radarChartInstance) {
+                radarChartInstance.data.datasets[0].data = [
+                    (c1_6 / 6) * 100, 
+                    (c7_9 / 3) * 100, 
+                    (c10_12 / 3) * 100
+                ];
+                radarChartInstance.update();
+            }
+        }
+
+        function initRadarChart() {
+            const ctx = document.getElementById('scoreRadarChart').getContext('2d');
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['單向讓步比例', '幫對方找理由', '迴避與期待落空'],
+                    datasets: [{
+                        label: '你的委屈指數 (%)',
+                        data: [0, 0, 0],
+                        backgroundColor: 'rgba(226, 149, 120, 0.4)',
+                        borderColor: '#E29578',
+                        pointBackgroundColor: '#E29578',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#E29578',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: {
+                                font: { family: 'Noto Sans TC', size: 12, weight: 'bold' },
+                                color: '#4A3B32'
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function initLineChart() {
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['初期', '1個月', '3個月', '半年', '1年', '更久'],
+                    datasets: [{
+                        label: '磨合 (解決問題的摩擦)',
+                        data: [80, 60, 40, 25, 15, 10],
+                        borderColor: '#60A5FA',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 3
+                    }, {
+                        label: '委屈 (心智消耗與隱忍)',
+                        data: [30, 45, 65, 80, 95, 100],
+                        borderColor: '#F87171',
+                        backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Noto Sans TC' } } }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            title: { display: true, text: '心智消耗 / 摩擦程度' },
+                            ticks: { display: false }
+                        },
+                        x: { title: { display: true, text: '相處時間' } }
+                    }
+                }
+            });
+        }
+
+        let flagCount = 0;
+        function toggleRedFlag(el) {
+            const icon = el.querySelector('.flag-icon');
+            if(el.classList.contains('bg-red-50')) {
+                el.classList.remove('bg-red-50', 'border-red-300');
+                el.classList.add('bg-white');
+                icon.classList.remove('text-red-500');
+                icon.classList.add('text-gray-300');
+                flagCount--;
+            } else {
+                el.classList.add('bg-red-50', 'border-red-300');
+                el.classList.remove('bg-white');
+                icon.classList.remove('text-gray-300');
+                icon.classList.add('text-red-500');
+                flagCount++;
+            }
+            
+            document.getElementById('redflag-count').innerText = flagCount;
+            const resultBox = document.getElementById('redflag-result');
+            
+            if(flagCount <= 3) {
+                resultBox.innerHTML = "<strong>正常摩擦：</strong> 出現 3 項以下多半是正常關係中會出現的摩擦，適合用「界線練習」來調整。";
+                resultBox.className = "mt-6 p-4 rounded-xl bg-green-50 text-green-700 transition-all text-center";
+            } else if (flagCount <= 7) {
+                resultBox.innerHTML = "<strong>需要注意：</strong> 出現 4～7 項，建議認真面對，這不是小題大作，關係已經需要一次坦誠的對話。";
+                resultBox.className = "mt-6 p-4 rounded-xl bg-orange-50 text-orange-700 transition-all text-center";
+            } else {
+                resultBox.innerHTML = "<strong>⚠️ 高度危險：</strong> 出現 8 項以上，請務必把這件事看得比「這段關係能不能維持」更重要——你的感受本身需要被回應！";
+                resultBox.className = "mt-6 p-4 rounded-xl bg-red-100 text-red-700 transition-all text-center font-bold";
+            }
+        }
+    </script>
+</body>
+</html>
